@@ -20,6 +20,7 @@ from typing import Dict, Iterable, Tuple
 CENSUS_ENDPOINT = "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress"
 CENSUS_BENCHMARK = "Public_AR_Current"
 GEOCODIO_ENDPOINT = "https://api.geocod.io/v1.7/geocode"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def load_csv(path: Path) -> list[dict[str, str]]:
@@ -254,9 +255,21 @@ def resolve_provider(provider_arg: str, geocodio_key: str) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Geocode organization CSV files into processed_data/.")
-    parser.add_argument("--input-dir", default="raw_data", help="Directory containing asian_org.csv and latino_org.csv")
-    parser.add_argument("--output-dir", default="processed_data", help="Directory for geocoded CSV outputs")
-    parser.add_argument("--cache", default="processed_data/geocode_cache.json", help="Path to geocode cache JSON")
+    parser.add_argument(
+        "--input-dir",
+        default=str(PROJECT_ROOT / "raw_data"),
+        help="Directory containing asian_org.csv and latino_org.csv",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default=str(PROJECT_ROOT / "processed_data"),
+        help="Directory for geocoded CSV outputs",
+    )
+    parser.add_argument(
+        "--cache",
+        default=str(PROJECT_ROOT / "processed_data" / "geocode_cache.json"),
+        help="Path to geocode cache JSON",
+    )
     parser.add_argument("--sleep", type=float, default=0.2, help="Delay between new geocode queries (seconds)")
     parser.add_argument("--timeout", type=float, default=10.0, help="HTTP timeout (seconds)")
     parser.add_argument(
@@ -272,13 +285,16 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    geocodio_key = (
-        args.geocodio_key
-        or os.environ.get("GEOCODIO_API_KEY", "")
-        or load_dotenv_key(Path(".env.local"), "GEOCODIO_API_KEY")
-        or load_key_from_file(Path("misc/geocodio_api_key.txt"))
-        or load_key_from_file(Path("misc/geocodeo_api_key.txt"))
-    )
+    geocodio_key = args.geocodio_key or os.environ.get("GEOCODIO_API_KEY", "")
+    if not geocodio_key:
+        geocodio_key = (
+            load_dotenv_key(Path(".env.local"), "GEOCODIO_API_KEY")
+            or load_dotenv_key(PROJECT_ROOT / ".env.local", "GEOCODIO_API_KEY")
+            or load_key_from_file(Path("misc/geocodio_api_key.txt"))
+            or load_key_from_file(Path("misc/geocodeo_api_key.txt"))
+            or load_key_from_file(PROJECT_ROOT / "misc" / "geocodio_api_key.txt")
+            or load_key_from_file(PROJECT_ROOT / "misc" / "geocodeo_api_key.txt")
+        )
     provider = resolve_provider(args.provider, geocodio_key)
 
     if provider == "geocodio" and not geocodio_key:
