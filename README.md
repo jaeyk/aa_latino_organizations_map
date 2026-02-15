@@ -1,4 +1,4 @@
-# wop_organizations_map
+# aa_latino_organizations_map
 
 Interactive map site for:
 

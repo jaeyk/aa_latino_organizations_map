@@ -35,6 +35,7 @@ const DATASETS = {
 
 const appState = {
   rows: { asian: [], latino: [] },
+  sources: { asian: null, latino: null },
   maps: {},
   selections: { asian: null, latino: null }
 };
@@ -63,7 +64,13 @@ async function loadCsvWithFallback(paths) {
       if (!response.ok) continue;
       const text = await response.text();
       const data = await parseCsvText(text);
-      if (data.length > 0) return data;
+      if (data.length > 0) {
+        return {
+          data,
+          path,
+          mode: path.includes("_geocoded") ? "geocoded" : "raw"
+        };
+      }
     } catch (_err) {
       // fallback to next path
     }
@@ -214,6 +221,14 @@ function updateStatePill(datasetKey) {
   node.textContent = state ? `Selected state: ${state} (click text to clear)` : "Showing all states";
 }
 
+function updateSourceStatus(datasetKey) {
+  const source = appState.sources[datasetKey];
+  const node = document.getElementById(`${datasetKey}-source-status`);
+  if (!node || !source) return;
+  const label = source.mode === "geocoded" ? "Geocoded" : "Raw fallback";
+  node.textContent = `Data source: ${label} (${source.path})`;
+}
+
 function tableRows() {
   let combined = [...filteredRows(appState.rows.asian), ...filteredRows(appState.rows.latino)];
 
@@ -291,17 +306,21 @@ function bindControls() {
 }
 
 async function init() {
-  const [asianRows, latinoRows] = await Promise.all([
+  const [asianLoad, latinoLoad] = await Promise.all([
     loadCsvWithFallback(DATASETS.asian.paths),
     loadCsvWithFallback(DATASETS.latino.paths)
   ]);
 
-  appState.rows.asian = asianRows.map((row) => normalizeRow(row, "asian"));
-  appState.rows.latino = latinoRows.map((row) => normalizeRow(row, "latino"));
+  appState.rows.asian = asianLoad.data.map((row) => normalizeRow(row, "asian"));
+  appState.rows.latino = latinoLoad.data.map((row) => normalizeRow(row, "latino"));
+  appState.sources.asian = { mode: asianLoad.mode, path: asianLoad.path };
+  appState.sources.latino = { mode: latinoLoad.mode, path: latinoLoad.path };
 
   appState.maps.asian = { map: initMap(DATASETS.asian.mapId), layer: null, legend: null };
   appState.maps.latino = { map: initMap(DATASETS.latino.mapId), layer: null, legend: null };
 
+  updateSourceStatus("asian");
+  updateSourceStatus("latino");
   bindControls();
   renderAll();
 }
