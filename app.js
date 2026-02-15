@@ -235,9 +235,7 @@ function tableRows() {
 
 function renderTable() {
   const rows = tableRows();
-  const show = rows.slice(0, 250);
-
-  recordsBodyEl.innerHTML = show
+  recordsBodyEl.innerHTML = rows
     .map(
       (r) => `<tr>
       <td>${r.datasetLabel}</td>
@@ -251,7 +249,7 @@ function renderTable() {
     )
     .join("");
 
-  tableSummaryEl.textContent = `Showing ${show.length} of ${rows.length} matching records`;
+  tableSummaryEl.textContent = `Showing ${rows.length} matching records`;
 }
 
 function escapeHtml(value) {
